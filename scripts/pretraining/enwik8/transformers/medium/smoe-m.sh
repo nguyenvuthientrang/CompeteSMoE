@@ -1,7 +1,7 @@
-mkdir -p checkpoints/enwik8/transformers-m/smoe
+mkdir -p checkpoints22/enwik8/transformers-m/smoe
 
 args="
---data /home/gtruong/Project/ICML2/data/enwik8 \
+--data data/pretraining/enwik8 \
 --base_arch transformer \
 --architecture sgsgsgsgsgsgsgsg \
 --gate_name smoe \
@@ -20,7 +20,7 @@ args="
 --batch-sz 48 \
 --batch-split 2 \
 --nbatches 1000 \
---checkpoint checkpoints/enwik8/transformers-m/smoe/smoe.pt \
+--checkpoint checkpoints22/enwik8/transformers-m/smoe/smoe.pt \
 "
 
 echo "Training ..."

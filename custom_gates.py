@@ -108,11 +108,11 @@ class CustomNaiveGate_Balance_XMoE(BaseGate):
     def forward(self, inp, return_all_scores=False):
 
         reduced_inp = self.inp_reduction(inp)
-        with torch.no_grad():
-            expert_embeddings_norm = self.expert_embeddings.norm(
-                p=2.0, dim=1, keepdim=True
-            )
-            self.expert_embeddings.mul_(1.5 / expert_embeddings_norm)
+        # with torch.no_grad():
+        #     expert_embeddings_norm = self.expert_embeddings.norm(
+        #         p=2.0, dim=1, keepdim=True
+        #     )
+        #     self.expert_embeddings.mul_(1.5 / expert_embeddings_norm)
 
         gate = self._cosine(reduced_inp, self.expert_embeddings)
         gate = self._make_finite(gate)
@@ -137,19 +137,130 @@ class CustomNaiveGate_Balance_XMoE(BaseGate):
             return gate_top_k_idx, gate_score, gate
         return gate_top_k_idx, gate_score
 
-    def _cosine(self, mat1, mat2, eps=1e-4):
+    # def _cosine(self, mat1, mat2, eps=1e-4): #num_denum_grouped #softmax( (W + epsilon1) (X + epsilon2))/ (norm(W+ epsilon1))(norm(X+ epsilon2)))
+    #     assert mat1.dim() == 2
+    #     assert mat2.dim() == 2
+    #     # print("==================mat1 before norm====================")
+    #     # print(torch.mean(mat1), torch.min(mat1), torch.max(mat1))
+    #     # print("==================mat2 before norm====================")
+    #     # print(torch.mean(mat2), torch.min(mat2), torch.max(mat2))
+    #     eps1 = torch.ones_like(mat1) * 5
+    #     eps2 = torch.ones_like(mat2) * 2
+    #     mat1 = mat1 + eps1
+    #     mat2 = mat2 + eps2
+    #     mat1 = F.normalize(mat1, p=2.0, dim=1, eps=eps)
+    #     mat2 = F.normalize(mat2.float(), p=2.0, dim=1, eps=eps)
+    #     # print("==================mat1 after norm====================")
+    #     # print(torch.mean(mat1), torch.min(mat1), torch.max(mat1))
+    #     # print("==================mat2 after norm====================")
+    #     # print(torch.mean(mat2), torch.min(mat2), torch.max(mat2))
+    #     return mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
+
+
+    # def _cosine(self, mat1, mat2, eps=1e-4): #eps to denom only #softmax( W X/ (norm(W) + epsilon)(norm(X) + epsilon))
+    #     assert mat1.dim() == 2
+    #     assert mat2.dim() == 2
+    #     #device = mat1.device
+    #     eps1 = torch.ones_like(mat1) * 1e-4
+    #     eps2 = torch.ones_like(mat2) * 1e-3
+    #     mat1 = self._normalize(mat1.float(), p=2.0, dim=1, eps=eps, pertube_eps = eps1)
+    #     mat2 = self._normalize(mat2.float(), p=2.0, dim=1, eps=eps, pertube_eps = eps2)
+    #     return mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
+
+    # def _cosine(self, mat1, mat2, eps=1e-4): #num_denum_grouped #softmax( (W + epsilon1) (X + epsilon2))/ (norm(W) + epsilon1))(norm(X) + epsilon2)))
+    #     assert mat1.dim() == 2
+    #     assert mat2.dim() == 2
+    #     #device = mat1.device
+    #     eps1 = torch.ones_like(mat1) * 1e-4
+    #     eps2 = torch.ones_like(mat2) * 1e-3
+    #     mat1 = self._normalize_(mat1.float(), p=2.0, dim=1, eps=eps, pertube_eps = eps1)
+    #     mat2 = self._normalize_(mat2.float(), p=2.0, dim=1, eps=eps, pertube_eps = eps2)
+    #     return mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
+
+    # def _cosine(self, mat1, mat2, eps = 1e-4, pertube_eps = 1e-6):
+    #     assert mat1.dim() == 2
+    #     assert mat2.dim() == 2
+    #     #device = mat1.device
+    #     pertube_eps = torch.ones_like(mat1) * 0.1
+    #     #print("pertube_eps", pertube_eps)
+    #     #p_values = np.random.uniform(low=1, high=3)
+    #     #print("p_values", p_values)
+    #     dot_product = mat1.float().matmul(mat2.transpose(0, 1))
+    #     mat1 = self._normalize(mat1.float(), p=2.0, dim=1, eps=eps, pertube_eps = pertube_eps)
+    #     #print("mat1", mat1)
+    #     mat2 = F.normalize(mat2.float(), p=2.0, dim=1, eps=eps)
+    #     sharpened_cosine = mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
+    #     p_values = torch.ones_like(sharpened_cosine) * 5
+    #     # print("sharpened_cosine", torch.mean(sharpened_cosine), torch.min(torch.abs(sharpened_cosine)), torch.max(torch.abs(sharpened_cosine)))
+    #     sign = torch.sign(dot_product)
+    #     cosine_similarity = sign * (sharpened_cosine.abs() ** p_values)
+    #     #print("cosine_similarity", cosine_similarity)
+    #     return cosine_similarity.type_as(mat1)
+
+
+    # def _cosine(self, mat1, mat2, eps=1e-4): 
+    #     """
+    #     Form 1
+    #     Mat1: X
+    #     Mat2: W + eps
+    #     """
+    #     assert mat1.dim() == 2
+    #     assert mat2.dim() == 2
+    #     eps2 = torch.ones_like(mat2) * 1e-3
+    #     mat2 = self._normalize_add(mat2.float(), p=2.0, dim=1, eps=eps, pertube_eps = eps2)
+    #     return mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
+
+
+    def _cosine(self, mat1, mat2, eps=1e-4): 
+        """
+        Form 2
+        Mat1: X + eps
+        Mat2: W + eps
+        """
         assert mat1.dim() == 2
         assert mat2.dim() == 2
-        # mat1 = F.normalize(mat1, p=2.0, dim=1, eps=eps)
-        mat2 = F.normalize(mat2.float(), p=2.0, dim=1, eps=eps)
+        eps1 = torch.ones_like(mat1) * 0.
+        eps2 = torch.ones_like(mat2) * 1e-3
+        mat1 = self._normalize_add(mat1.float(), p=2.0, dim=1, pertube_eps = eps1)
+        mat2 = self._normalize_add(mat2.float(), p=2.0, dim=1, pertube_eps = eps2)
         return mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
 
+
+    # def _cosine(self, mat1, mat2, eps=1e-4): 
+    #     """
+    #     Form 3
+    #     Mat1: max(X, eps)
+    #     Mat2: W + eps
+    #     """
+    #     assert mat1.dim() == 2
+    #     assert mat2.dim() == 2
+    #     eps2 = torch.ones_like(mat2) * 1e-3
+    #     mat1 = F.normalize(mat1, p=2.0, dim=1, eps=eps)
+    #     mat2 = self._normalize_add(mat2.float(), p=2.0, dim=1, pertube_eps = eps2)
+    #     return mat1.float().matmul(mat2.transpose(0, 1)).type_as(mat1)
+    
     def _make_finite(self, scores):
         ok = scores.isfinite()
         if not ok.all():
             # NaNs here can break the assignment algorithm
             scores[~ok] = scores[ok].min()
         return scores
+
+    # def _normalize(self, input, p: float = 2.0, dim: int = 1, eps: float = 1e-12, pertube_eps = 1e-4): 
+
+    #     denom = input.norm(p, dim, keepdim=True).clamp_min(eps).expand_as(input) + pertube_eps
+    #     return input / denom
+    
+    # def _normalize_(self, input, p: float = 2.0, dim: int = 1, eps: float = 1e-12, pertube_eps = 1e-4): 
+
+    #     denom = input.norm(p, dim, keepdim=True).clamp_min(eps).expand_as(input) + pertube_eps
+    #     return (input + pertube_eps) / denom
+
+
+    def _normalize_add(self, input, p: float = 2.0, dim: int = 1, pertube_eps = 1e-4): 
+
+        denum = input.norm(p, dim, keepdim=True).expand_as(input) + pertube_eps
+        return input / denum
 
 
 class CustomNaiveGate_Balance_StableMoE(BaseGate):

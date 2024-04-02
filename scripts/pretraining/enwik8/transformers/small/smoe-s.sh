@@ -1,7 +1,7 @@
 mkdir -p checkpoints/enwik8/transformers-s/smoe
 
 args="
---data /home/gtruong/Project/ICML2/data/enwik8 \
+--data data/pretraining/enwik8 \
 --base_arch transformer \
 --architecture sgsgsgsgsgsg \
 --gate_name smoe \

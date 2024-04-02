@@ -1,7 +1,7 @@
-mkdir -p checkpoints/enwik8/transformers-s/xmoe
+mkdir -p checkpoints/enwik8/transformers-s/xmoe/pertubed_2/epsw_1e-3_epsx_0
 
 args="
---data /home/gtruong/Project/ICML2/data/enwik8 \
+--data data/pretraining/enwik8 \
 --base_arch transformer \
 --architecture sgsgsgsgsgsg \
 --gate_name xmoe \
@@ -20,7 +20,7 @@ args="
 --batch-sz 48 \
 --batch-split 2 \
 --nbatches 1000 \
---checkpoint checkpoints/enwik8/transformers-s/xmoe/xmoe.pt \
+--checkpoint checkpoints/enwik8/transformers-s/xmoe/pertubed_2/epsw_1e-3_epsx_0/xmoe.pt \
 "
 
 echo "Training ..."
